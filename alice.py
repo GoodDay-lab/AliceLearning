@@ -97,8 +97,12 @@ def handle_dialog(req, res):
         # Пользователь согласился, прощаемся.
         res['response']['text'] = f'{sessionStorage[user_id]["animals"][0]} можно найти на Яндекс.Маркете!'
         if len(sessionStorage[user_id]['animals']) > 1:
-            res['response']['end_session'] = False
             sessionStorage[user_id]['animals'] = sessionStorage[user_id]['animals'][1:]
+            sessionStorage[user_id]['suggest'] = [
+                "Не хочу.",
+                "Не буду.",
+                "Отстань!",
+            ]
         else:
             res['response']['end_session'] = True
         return
