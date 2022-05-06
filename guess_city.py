@@ -92,3 +92,6 @@ def init_game(user_id):
     return
 
 
+if __name__ == '__main__':
+    app.run(port=443)
+
