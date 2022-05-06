@@ -96,7 +96,7 @@ def handle_dialog(req, res):
     if "лад" in v or 'хорош' in v or 'куп' in v:
         # Пользователь согласился, прощаемся.
         res['response']['text'] = f'{sessionStorage[user_id]["animals"][0]} можно найти на Яндекс.Маркете!'
-        if len(sessionStorage[user_id]['animals']) > 1:
+        if len(sessionStorage[user_id]['animals']) == 2:
             sessionStorage[user_id]['animals'] = sessionStorage[user_id]['animals'][1:]
             sessionStorage[user_id]['suggest'] = [
                 "Не хочу.",
