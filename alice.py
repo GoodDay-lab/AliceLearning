@@ -72,10 +72,14 @@ def handle_dialog(req, res):
                 "Не хочу.",
                 "Не буду.",
                 "Отстань!",
+            ],
+            'animals': [
+                'слона',
+                'кролика'
             ]
         }
         # Заполняем текст ответа
-        res['response']['text'] = 'Привет! Купи слона!'
+        res['response']['text'] = f'Привет! Купи {sessionStorage[user_id]["animals"][0]}!'
         # Получим подсказки
         res['response']['buttons'] = get_suggests(user_id)
         return
@@ -91,13 +95,13 @@ def handle_dialog(req, res):
     v = req['request']['original_utterance'].lower()
     if "лад" in v or 'хорош' in v or 'куп' in v:
         # Пользователь согласился, прощаемся.
-        res['response']['text'] = 'Слона можно найти на Яндекс.Маркете!'
+        res['response']['text'] = f'{sessionStorage[user_id]["animals"][0]} можно найти на Яндекс.Маркете!'
         res['response']['end_session'] = True
         return
 
     # Если нет, то убеждаем его купить слона!
     res['response']['text'] = \
-        f"Все говорят '{req['request']['original_utterance']}', а ты купи слона!"
+        f"Все говорят '{req['request']['original_utterance']}', а ты купи {sessionStorage[user_id]['animals'][0]}!"
     res['response']['buttons'] = get_suggests(user_id)
 
 
@@ -118,11 +122,19 @@ def get_suggests(user_id):
     # Если осталась только одна подсказка, предлагаем подсказку
     # со ссылкой на Яндекс.Маркет.
     if len(suggests) < 2:
-        suggests.append({
-            "title": "Ладно",
-            "url": "https://market.yandex.ru/search?text=слон",
-            "hide": True
-        })
+        if len(sessionStorage[user_id]['animals']) == 2:
+            suggests.append({
+                "title": "Ладно",
+                "url": "https://market.yandex.ru/search?text=слон",
+                "hide": False
+            })
+            sessionStorage[user_id]['animals'] = sessionStorage[user_id]['animals'][1:]
+        else:
+            suggests.append({
+                "title": "Ладно",
+                "url": "https://market.yandex.ru/search?text=кролика",
+                "hide": False
+            })
 
     return suggests
 
