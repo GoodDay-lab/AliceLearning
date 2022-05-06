@@ -98,6 +98,11 @@ def handle_dialog(req, res):
         if len(sessionStorage[user_id]["animal"]) == 1:
             res['response']['end_session'] = True
         sessionStorage[user_id]["animal"] = sessionStorage[user_id]["animal"][1:]
+        sessionStorage[user_id]["suggests"] = [
+                "Не хочу.",
+                "Не буду.",
+                "Отстань!",
+            ]
         return
 
     # Если нет, то убеждаем его купить слона!
