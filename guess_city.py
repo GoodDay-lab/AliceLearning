@@ -3,7 +3,6 @@ from flask import Flask, request
 import logging
 import json
 
-logging.basicConfig(filename="server.log")
 
 app = Flask(__name__)
 storage = {}
