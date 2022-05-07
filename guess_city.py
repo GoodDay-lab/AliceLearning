@@ -1,10 +1,9 @@
-from locale import normalize
 import random
 from flask import Flask, request
 import logging
 import json
 
-logging.basicConfig()
+logging.basicConfig(filename="server.log")
 
 app = Flask(__name__)
 storage = {}
