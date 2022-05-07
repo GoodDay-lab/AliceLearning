@@ -85,8 +85,13 @@ def get_country(city_name):
         return e
 
 
-def normalize_answer(string):
-    return string.replace(' ', '')
+def get_geo_info(city_name, type_):
+    if type_ == 'country':
+        return get_country(city_name)
+    elif type_ == 'coordinates':
+        return get_coordinates(city_name)
+    else:
+        return "No response"
 
 
 @app.route("/post", methods=["POST"])
