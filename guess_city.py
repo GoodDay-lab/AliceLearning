@@ -2,6 +2,8 @@ import random
 from flask import Flask, request
 import logging
 import json
+import requests
+import math
 
 
 app = Flask(__name__)
@@ -14,6 +16,73 @@ questions = {
     '213044/84d0f658561ff56a2e70': 'Москва',
     'count': 5
 }
+
+
+def get_coordinates(city_name):
+    try:
+        # url, по которому доступно API Яндекс.Карт
+        url = "https://geocode-maps.yandex.ru/1.x/"
+        # параметры запроса
+        params = {
+            "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
+            # город, координаты которого мы ищем
+            'geocode': city_name,
+            # формат ответа от сервера, в данном случае JSON
+            'format': 'json'
+        }
+        # отправляем запрос
+        response = requests.get(url, params)
+        # получаем JSON ответа
+        json = response.json()
+        # получаем координаты города
+        # (там написаны долгота(longitude), широта(latitude) через пробел)
+        # посмотреть подробное описание JSON-ответа можно
+        # в документации по адресу https://tech.yandex.ru/maps/geocoder/
+        coordinates_str = json['response']['GeoObjectCollection'][
+            'featureMember'][0]['GeoObject']['Point']['pos']
+        # Превращаем string в список, так как
+        # точка - это пара двух чисел - координат
+        long, lat = map(float, coordinates_str.split())
+        # Вернем ответ
+        return long, lat
+    except Exception as e:
+        return e
+
+
+def get_distance(p1, p2):
+    # p1 и p2 - это кортежи из двух элементов - координаты точек
+    radius = 6373.0
+
+    lon1 = math.radians(p1[0])
+    lat1 = math.radians(p1[1])
+    lon2 = math.radians(p2[0])
+    lat2 = math.radians(p2[1])
+
+    d_lon = lon2 - lon1
+    d_lat = lat2 - lat1
+
+    a = math.sin(d_lat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(d_lon / 2) ** 2
+    c = 2 * math.atan2(a ** 0.5, (1 - a) ** 0.5)
+
+    distance = radius * c
+    return distance
+
+
+def get_country(city_name):
+    try:
+        url = "https://geocode-maps.yandex.ru/1.x/"
+        params = {
+            "apikey": "40d1649f-0493-4b70-98ba-98533de7710b",
+            'geocode': city_name,
+            'format': 'json'
+        }
+        data = requests.get(url, params).json()
+        # все отличие тут, мы получаем имя страны
+        return data['response']['GeoObjectCollection'][
+            'featureMember'][0]['GeoObject']['metaDataProperty'][
+            'GeocoderMetaData']['AddressDetails']['Country']['CountryName']
+    except Exception as e:
+        return e
 
 
 def normalize_answer(string):
@@ -37,65 +106,34 @@ def handle_request():
 
 def make_response(req, res):
     if req['session']['new']:
-        res['response']['text'] = "Привет! Меня зовут Алиса, давай сыграем?"
-        res['response']['buttons'] = [
-        {
-            'title': 'Да',
-            'hide': True
-        },
-        {
-            'title': 'Нет',
-            'hide': True
-        }
-        ]
+        res['response']['text'] = "Привет! Меня зовут Алиса, пиши города!"
         return res
     
-    if "помощь" in req['request']['nlu']['tokens']:
-        res['response']['text'] = \
-        """
-            Чтобы выиграть, вам надо правильно называть города,
-            кстати, сейчас ваш ход: (пишите)
-        """
-        return res
+    cities = []
+    for entity in req['request']['nlu']['entities']:
+        if entity['type'] == 'YANDEX.GEO':
+            if 'city' in entity['value']:
+                cities.append(entity['value']['city'])
     
-    if 'да' in req['request']['command']:
-        init_game(req['session']['user_id'])
-    elif 'нет' in req['request']['command']:
-        res['response']['text'] = "Раз нет, значит, нет.."
-        res['response']['end_session'] = True
-        return res
+    if not cities:
+        res['response']['text'] = "Вы не написали ни один город!"
     
-    user_id = req['session']['user_id']
-    data = storage[user_id]
-    
-    if data['cur'] < questions['count']:
-        res['response']['text'] = "some problems.."
-        res['response']['card'] = {
-            'type': 'BigImage',
-            'image_id': data['q'][data['cur']],
-        }
-        res['response']['buttons'] = [
-            {
-                'title': 'Помощь',
-                "payload": {},
-                "hide": True
-            }
-        ]
+    elif len(cities) == 1:
+        country = get_country(cities[0])
         
-        if data['rigth_answer'] != None:
-            is_rigth = req['request']['command'] == data['rigth_answer'].lower()
-            res['response']['card']['title'] = ("Верно!" 
-                                                if is_rigth
-                                                else 'Неверно!')
-            storage[user_id]['result'] += is_rigth
-        data['rigth_answer'] = questions[data['q'][data['cur']]]
-        data['cur'] += 1
-        return res
-    else:
-        res['response']['text'] = f"Вы прошли! С результатом {data['result']}"
-        res['response']['end_session'] = True
-        return res
+        res['response']['text'] = f"Этот город находится в стране - {country}"
+    
+    elif len(cities) == 2:
+        coord1 = get_coordinates(cities[0])
+        coord2 = get_coordinates(cities[1])
+        distance = get_distance(coord1, coord2)
+        
+        res['response']['text'] = f"Дистанция между этими городами - {distance}"
 
+    else:
+        res['response']['text'] = "Очень много.. Это невозможно!"
+    return res
+        
 
 def init_game(user_id):
     list_ = list(questions.keys())
